@@ -33,8 +33,6 @@ Note that a 4k7 pullup is required between VCC and Signal (one per bus).
 
 ## Arduino libraries
 
-* [PrintEx](https://github.com/Chris--A/PrintEx#printex-library-for-arduino-)
-  Also available from Arduino IDE directly.
 * [OneWire](https://www.pjrc.com/teensy/td_libs_OneWire.html)
   Also available from Arduino IDE directly.
 
