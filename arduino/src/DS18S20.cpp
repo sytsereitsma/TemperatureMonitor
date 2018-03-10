@@ -23,14 +23,12 @@ bool DS18S20::Detect () {
     if (!mDS.search (addr, true)) {
         //no more sensors on chain, reset search
         mDS.reset_search ();
-        mLogStream << "No temperature sensor found at pin " << mDS.GetPin () << "\n";
+        mLogStream << "No devices found at pin " << mDS.GetPin () << ".\n";
     }
     else {
         const auto expectedCRC (mDS.crc8 (addr, kCRCIndex));
         if (expectedCRC == addr[kCRCIndex]) {
-            mLogStream << "Device found at pin " << mDS.GetPin () << ": ";
-            PrintAddress(mLogStream, addr);
-            mLogStream.println();
+            mLogStream << "Device found at pin " << mDS.GetPin () << ": " << OneWireAddress {addr} << "\n";
 
             constexpr uint8_t kDS18S20FamilyCode = {0x28};
             if (addr[0] != kDS18S20FamilyCode && addr[0] != kDS18S20FamilyCode) {
@@ -42,9 +40,11 @@ bool DS18S20::Detect () {
             }
         }        
         else {
-              mLogStream << "CRC is not valid for device at pin " << mDS.GetPin () << " (address ";
-              PrintAddress(mLogStream, addr);
-              mLogStream << ", expected CRC " << Hex { expectedCRC } << ")." << "\n";
+              mLogStream << "CRC is not valid for device at pin " << mDS.GetPin ()
+                         << " (address " << OneWireAddress {addr}
+                         << ", expected CRC 0x" << Hex { expectedCRC }
+                         << ", got 0x" << Hex {addr[kCRCIndex]} << ")."
+                         << "\n";
         }
     }
 
@@ -69,19 +69,17 @@ bool DS18S20::GetTemperature (float& outTemp) {
     }
 
     bool ok (false);
-    if (StartConversion ()) {
-        constexpr uint8_t kScratchPadSize = { 9u };
-        uint8_t data [kScratchPadSize];
-        if (ReadScratchPad (data, kScratchPadSize)) {
-            uint8_t lsb = data [0];
-            uint8_t msb = data [1];
+    constexpr uint8_t kScratchPadSize = { 9u };
+    uint8_t data [kScratchPadSize];
+    if (ReadScratchPad (data, kScratchPadSize)) {
+        uint8_t lsb = data [0];
+        uint8_t msb = data [1];
 
-            float tempRead = ((msb << 8) | lsb); //using two's compliment
-            float TemperatureSum = tempRead / 16;
+        float tempRead = ((msb << 8) | lsb); //using two's compliment
+        float TemperatureSum = tempRead / 16;
 
-            outTemp = TemperatureSum;//Fahrenheit: (TemperatureSum * 18 + 5)/10 + 32;
-            ok = true;
-        }
+        outTemp = TemperatureSum;//Fahrenheit: (TemperatureSum * 18 + 5)/10 + 32;
+        ok = true;
     }
 
     return ok;
@@ -128,9 +126,8 @@ void DS18S20::ReadPowerSupplyType () {
     constexpr uint8_t kReadPowerSupplyCommand = {0xB4};
     if (SendCommand (kReadPowerSupplyCommand, false)) {
         mParasitePowered = (mDS.read () != 0xFF);
-
-        PrintAddress(mLogStream, mAddress);
-        mLogStream << " is " << (mParasitePowered ? "" : "not ") << "parasite powered\n";
+        mLogStream << "Device " << OneWireAddress {mAddress} << " at pin " << mDS.GetPin ()
+                   << " is " << (mParasitePowered ? "" : "not ") << "parasite powered.\n";
     }
 }
 

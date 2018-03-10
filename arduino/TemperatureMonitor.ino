@@ -14,9 +14,7 @@ void loop() {
         DS18S20 sensor (wrapper, Serial);
         float temperature;
         if (sensor.GetTemperature (temperature)) {
-            PrintAddress(Serial, sensor.GetAddress ());
-            Serial << ':';
-            Serial.println(temperature);
+            Serial << OneWireAddress {sensor.GetAddress ()} << ':' << temperature << "\n";
         }
     }
 
