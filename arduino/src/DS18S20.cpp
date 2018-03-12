@@ -4,12 +4,11 @@
 #include <Stream.h>
 
 
-DS18S20::DS18S20 (IOneWire& inOneWire, Stream& inLogStream) :
+DS18S20::DS18S20 (IOneWire& inOneWire, Print& inLogStream) :
     mDS (inOneWire),
     mLogStream (inLogStream)
 {
     ResetAddress ();
-    Detect ();
 }
 
 
@@ -110,12 +109,13 @@ bool DS18S20::ReadScratchPad (uint8_t* outScratchPad, uint8_t inSize) {
     if (SendCommand (kReadScratchPadCommand, false)) {
         mDS.read_bytes (outScratchPad, inSize);
         constexpr uint8_t kCRCIndex {8};
-
-        if (mDS.crc8 (outScratchPad, kCRCIndex) == outScratchPad[kCRCIndex]) {
+        const auto expectedCRC (mDS.crc8 (outScratchPad, kCRCIndex));
+        if (expectedCRC == outScratchPad[kCRCIndex]) {
             return true;
         }
         else {
-            mLogStream << '[' << mDS.GetPin () << "] Data CRC error\n";
+            mLogStream << "Scratchpad CRC is not valid for device " << OneWireAddress {mAddress} << " at pin " << mDS.GetPin ()
+                         << " (expected CRC 0x" << Hex { expectedCRC } << ", got 0x" << Hex {outScratchPad[kCRCIndex]} << ").\n";
         }
     }        
 

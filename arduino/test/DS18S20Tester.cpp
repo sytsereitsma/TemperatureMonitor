@@ -11,9 +11,13 @@ namespace {
     const uint8_t kGoodCrc8 {0xA5}; //Not really, but we're mocking here, so it does not matter
     const uint8_t kGoodAddress [kAddressSize] = {0x28, 1, 2, 3, 4, 5, 6, kGoodCrc8};
     const uint8_t kZeroAddress [kAddressSize] = {0};
+    constexpr uint8_t kScratchPadSize {9u};
+    const uint8_t kScratchPad [kScratchPadSize] {0x12, 0x34, 2, 3, 4, 5, 6, 7, kGoodCrc8};
 
     struct Context {
-        Context () {
+        Context () :
+            ds (mockOneWire.get (), logStream)
+        {
             When(Method(mockOneWire, search))
                 .Return(0);
             When(Method(mockOneWire, reset_search))
@@ -45,12 +49,12 @@ namespace {
                 }); 
         }
 
-        void MockWriteCommand (const void* inExpectedAddress, uint8_t inCommand, uint8_t inPower) {
+        void MockWriteCommand (uint8_t inCommand, uint8_t inPower) {
             When(Method(mockOneWire, reset))
                 .Return(1);
 
-            auto compare = [inExpectedAddress] (const void* inAddress) {
-                return memcmp (inExpectedAddress, inAddress, kAddressSize) == 0;
+            auto compare = [this] (const void* inAddress) {
+                return memcmp (ds.GetAddress (), inAddress, kAddressSize) == 0;
             };
             When(Method(mockOneWire, select)
                 .Matching(compare))
@@ -60,179 +64,148 @@ namespace {
                 .Return();
         }
 
-        void MockWriteCommand (const DS18S20& ioDS, uint8_t inCommand, uint8_t inPower) {
-            MockWriteCommand (ioDS.GetAddress (), inCommand, inPower);
+        bool DoSuccessfulDetection () {
+            MockDetection (kGoodAddress, kGoodCrc8);
+            return ds.Detect ();
+        }
+
+        void MockReadScratchpad (uint8_t inComputedCRC) {
+            When(Method(mockOneWire, read_bytes)
+                .Using (_, kScratchPadSize))
+                .Do ([](uint8_t* buffer, uint16_t count) {
+                    memcpy(buffer, kScratchPad, kScratchPadSize);
+                }); 
+            When(Method(mockOneWire, crc8))
+                .Return(inComputedCRC);
         }
 
         Mock <IOneWire> mockOneWire;
+        StringStream logStream;
+        DS18S20 ds;
     };
 }
 
 TEST_CASE( "DS18S20 testers", "[base]" ) {
-    StringStream logStream;
+    Context ctx;
 
-    SECTION("Detects sensor address at construction") {
-        Context ctx;
-        ctx.MockDetection (kGoodAddress, kGoodCrc8);
-
-        DS18S20 ds(ctx.mockOneWire.get (), logStream);
+    SECTION("Detects sensor address at detection") {
+        REQUIRE (ctx.DoSuccessfulDetection ());
 
         std::string expectedAddress (kGoodAddress, kGoodAddress + kAddressSize);
-        std::string actualAddress (ds.GetAddress (), ds.GetAddress () + kAddressSize);
+        std::string actualAddress (ctx.ds.GetAddress (), ctx.ds.GetAddress () + kAddressSize);
         REQUIRE_THAT (actualAddress, Catch::Matchers::Equals(expectedAddress));
-        
-        REQUIRE_THAT (logStream.mStream.str(), Catch::Matchers::Contains(
+            REQUIRE_THAT (ctx.logStream.mString, Catch::Matchers::Contains(
             "Device found at pin 3: 28-010203040506-A5\n"
         ));
     }
 
     SECTION("Address is all zeroes when there is an address CRC error") {
-        Context ctx;
-        ctx.MockDetection (kGoodAddress, 0xDD);
-        DS18S20 ds(ctx.mockOneWire.get (), logStream);
+        ctx.MockDetection (kGoodAddress, kGoodCrc8 + 1);
+        REQUIRE_FALSE (ctx.ds.Detect ());
 
-        REQUIRE (memcmp (kZeroAddress, ds.GetAddress (), kAddressSize) == 0);
+        REQUIRE (memcmp (kZeroAddress, ctx.ds.GetAddress (), kAddressSize) == 0);
 
-        REQUIRE_THAT (logStream.mStream.str(), Catch::Matchers::Contains(
-            "CRC is not valid for device at pin 3 (address 28-010203040506-A5, expected CRC 0xDD, got 0xA5).\n"
+        REQUIRE_THAT (ctx.logStream.mString, Catch::Matchers::Contains(
+            "CRC is not valid for device at pin 3 (address 28-010203040506-A5, expected CRC 0xA6, got 0xA5).\n"
         ));
     }
 
     SECTION("Detection failure after successful detection resets address") {
-        Context ctx;
-        ctx.MockDetection (kGoodAddress, kGoodCrc8);
-
-        DS18S20 ds(ctx.mockOneWire.get (), logStream);
+        REQUIRE (ctx.DoSuccessfulDetection ());
 
         ctx.MockDetection (kGoodAddress, kGoodCrc8 + 1);
-        REQUIRE (!ds.Detect ());
+        REQUIRE_FALSE (ctx.ds.Detect ());
 
-        REQUIRE (memcmp (kZeroAddress, ds.GetAddress (), kAddressSize) == 0);
+        REQUIRE (memcmp (kZeroAddress, ctx.ds.GetAddress (), kAddressSize) == 0);
     }
 
     SECTION("No devices on bus resets address") {
-        Context ctx;
-
         When(Method(ctx.mockOneWire, search))
             .Return(0);
 
-        DS18S20 ds(ctx.mockOneWire.get (), logStream);
-        REQUIRE (memcmp (kZeroAddress, ds.GetAddress (), kAddressSize) == 0);
+        REQUIRE_FALSE (ctx.ds.Detect ());
 
-        REQUIRE_THAT (logStream.mStream.str(), Catch::Matchers::Contains(
+        REQUIRE (memcmp (kZeroAddress, ctx.ds.GetAddress (), kAddressSize) == 0);
+
+        REQUIRE_THAT (ctx.logStream.mString, Catch::Matchers::Contains(
             "No devices found at pin 3.\n"
         ));
     }
 
     SECTION("Detect parasitic power") {
-        Context ctx;
-        ctx.MockDetection (kGoodAddress, kGoodCrc8);
-        ctx.MockWriteCommand (kGoodAddress, 0xB4, 0);
-
+        ctx.MockWriteCommand (0xB4, 0);
         When(Method(ctx.mockOneWire, read))
             .Return(0);
 
-        DS18S20 ds(ctx.mockOneWire.get (), logStream);
-        REQUIRE (ds.IsParasitePowered ());
+        REQUIRE (ctx.DoSuccessfulDetection ());
+        REQUIRE (ctx.ds.IsParasitePowered ());
 
         Verify(Method(ctx.mockOneWire,write)
             .Using(0xB4, 0))
             .Once ();
 
-        REQUIRE_THAT (logStream.mStream.str(), Catch::Matchers::Contains(
+        REQUIRE_THAT (ctx.logStream.mString, Catch::Matchers::Contains(
             "Device 28-010203040506-A5 at pin 3 is parasite powered.\n"
         ));
     }
 
     SECTION("Detect VCC power") {
-        Context ctx;
-        ctx.MockDetection (kGoodAddress, kGoodCrc8);
+        ctx.MockWriteCommand (0xB4, 0);
         When(Method(ctx.mockOneWire, read))
             .Return(0xFF);
 
-        DS18S20 ds(ctx.mockOneWire.get (), logStream);
-        REQUIRE_FALSE (ds.IsParasitePowered ());
+        REQUIRE (ctx.DoSuccessfulDetection ());
+        REQUIRE_FALSE (ctx.ds.IsParasitePowered ());
 
-        //write parameter checked by "Detect parasitic power" test case
-
-        REQUIRE_THAT (logStream.mStream.str(), Catch::Matchers::Contains(
+        REQUIRE_THAT (ctx.logStream.mString, Catch::Matchers::Contains(
             "Device 28-010203040506-A5 at pin 3 is not parasite powered.\n"
         ));
     }
 
     SECTION("Start temperature conversion") {
-        Context ctx;
-        ctx.MockDetection (kGoodAddress, kGoodCrc8);
-        DS18S20 ds(ctx.mockOneWire.get (), logStream);
+        REQUIRE (ctx.DoSuccessfulDetection ());
 
-        ctx.MockWriteCommand (ds, 0x44, 1);
+        ctx.MockWriteCommand (0x44, 1);
 
-        REQUIRE (ds.StartConversion ());
+        REQUIRE (ctx.ds.StartConversion ());
     }
 
     SECTION("Start temperature conversion returns false when reset fails") {
-        Context ctx;
-        ctx.MockDetection (kGoodAddress, kGoodCrc8);
-        DS18S20 ds(ctx.mockOneWire.get (), logStream);
+        REQUIRE (ctx.DoSuccessfulDetection ());
 
         When(Method(ctx.mockOneWire, reset))
             .Return(0);
-        REQUIRE_FALSE (ds.StartConversion ());
+        REQUIRE_FALSE (ctx.ds.StartConversion ());
     }
 
     SECTION("Read temperature") {
-        Context ctx;
-        ctx.MockDetection (kGoodAddress, kGoodCrc8);
-        DS18S20 ds(ctx.mockOneWire.get (), logStream);
+        REQUIRE (ctx.DoSuccessfulDetection ());
 
-        ctx.MockWriteCommand (ds, 0xBE, 0);
-
-        constexpr uint8_t kScratchPadSize {9u};
-        const uint8_t kScratchPad [kScratchPadSize] {0x12, 0x34, 2, 3, 4, 5, 6, 7, kGoodCrc8};
-        {//Read scratchpad bytes
-            When(Method(ctx.mockOneWire, read_bytes)
-                .Using (_, kScratchPadSize))
-                .Do ([kScratchPad](uint8_t* buffer, uint16_t count) {
-                    memcpy(buffer, kScratchPad, kScratchPadSize);
-                }); 
-            When(Method(ctx.mockOneWire, crc8))
-                .Return(kGoodCrc8);
-        }
+        ctx.MockWriteCommand (0xBE, 0);
+        ctx.MockReadScratchpad (kGoodCrc8);
 
         float temperature;
-        REQUIRE (ds.GetTemperature (temperature));
-
-        const float kExpectedTemperature ((kScratchPad [0] + (kScratchPad [1] << 8)) / 16.0f);
-        REQUIRE(temperature == Approx(kExpectedTemperature));
-    }
-
-    SECTION("Read temperature CRC error") {
-        Context ctx;
-        ctx.MockDetection (kGoodAddress, kGoodCrc8);
-        DS18S20 ds(ctx.mockOneWire.get (), logStream);
-
-        ctx.MockWriteCommand (ds, 0xBE, 0);
-
-        constexpr uint8_t kScratchPadSize {9u};
-        const uint8_t kScratchPad [kScratchPadSize] {0x12, 0x34, 2, 3, 4, 5, 6, 7, kGoodCrc8};
-        {//Read scratchpad bytes
-            When(Method(ctx.mockOneWire, read_bytes)
-                .Using (_, kScratchPadSize))
-                .Do ([kScratchPad](uint8_t* buffer, uint16_t count) {
-                    memcpy(buffer, kScratchPad, kScratchPadSize);
-                }); 
-            When(Method(ctx.mockOneWire, crc8))
-                .Return(kGoodCrc8);
-        }
-
-        float temperature;
-        REQUIRE (ds.GetTemperature (temperature));
+        REQUIRE (ctx.ds.GetTemperature (temperature));
 
         const float kExpectedTemperature ((kScratchPad [0] + (kScratchPad [1] << 8)) / 16.0f);
         REQUIRE(temperature == Approx(kExpectedTemperature));
 
-        Verify(Method(ctx.mockOneWire,write)
+        Verify(Method(ctx.mockOneWire, write)
             .Using(0xBE, 0))
             .Once ();
+    }
+
+    SECTION("Read temperature CRC error returns false") {
+        REQUIRE (ctx.DoSuccessfulDetection ());
+
+        ctx.MockWriteCommand (0xBE, 0);
+        ctx.MockReadScratchpad (kGoodCrc8 + 1);
+
+        float temperature;
+        REQUIRE_FALSE (ctx.ds.GetTemperature (temperature));
+
+        REQUIRE_THAT (ctx.logStream.mString, Catch::Matchers::Contains(
+            "Scratchpad CRC is not valid for device 28-010203040506-A5 at pin 3 (expected CRC 0xA6, got 0xA5).\n"
+        ));
     }
 }

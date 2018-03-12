@@ -1,42 +1,36 @@
+#if __AVR__
+static_assert (false, "Now why would you want to build this file for AVR?");
+#endif
+
 #ifndef NATIVE_ONEWIRE_H__
 #define NATIVE_ONEWIRE_H__
+#include <map>
+#include "constants.h"
 
-#if __AVR__ != 1
-
+/**
+Minimal OneWire emulation for DS18S20
+*/
 class OneWire {
 public:
-    OneWire (int /*inPin*/) {
-    }
+    OneWire (uint8_t inPin);
+    uint8_t reset ();
 
-    uint8_t reset () {
-        return 0;
-    }
+    void reset_search ();
 
-    void reset_search () {
-    }
+    uint8_t search(uint8_t *newAddr, bool search_mode /*= true*/);
 
-    uint8_t search(uint8_t *newAddr, bool search_mode /*= true*/) {
-        return 0;
-    }
+    void select (const uint8_t rom[8]);
 
-    void select (const uint8_t rom[8]) {
-    };
+    uint8_t read ();
 
-    uint8_t read () {
-        return 0;
-    }
+    void read_bytes (uint8_t *buf, uint16_t count);
 
-    void read_bytes (uint8_t *buf, uint16_t count) {
-    }
+    void write(uint8_t v, uint8_t power/* = 0*/);
 
-    void write(uint8_t v, uint8_t power/* = 0*/) {
-    }
-
-    static uint8_t crc8 (const uint8_t *addr, uint8_t len) {
-        return 0;
-    }
+    static uint8_t crc8 (const uint8_t *addr, uint8_t len);
+private:
+    uint8_t mAddress [kAddressSize];
+    uint8_t mPin;
 };
-
-#endif
 
 #endif /* end of include guard: NATIVE_ONEWIRE_H__ */

@@ -1,4 +1,4 @@
-PHONY: firsttime all show clean compile test
+PHONY: firsttime all show clean compile test native
 
 APPNAME=temperature-monitor
 
@@ -23,7 +23,6 @@ else
 		src/native
 
 	CPP_FILES+= $(wildcard $(EXTERNAL_DIR)/ArduinoEmulator/src/*.cpp)
-	CPP_FILES+= $(wildcard test/*.cpp)
 
 	CPP_FLAGS+= -DF_CPU=8000000
 	CPP_FLAGS+= -include "Serial.h"\
@@ -31,6 +30,7 @@ else
 	            -include "cstring" \
 	            -include "cctype" \
 	            -include "cstdio"
+	LD_FLAGS+=-pthread
 endif
 
 EXTERNAL_DIR=$(BLD_DIR)/external
@@ -67,10 +67,26 @@ firsttime: $(EXTERNALS)
 INCLUDES += \
 	src
 
+ifeq ($(findstring test,$(MAKECMDGOALS)),test)
+	IS_TEST_BUILD=yes
+else ifeq ($(findstring native,$(MAKECMDGOALS)),native)
+	IS_NATIVE_BUILD=yes
+endif
+
+ifeq ($(IS_TEST_BUILD),yes)
+	EXCLUDED_SOURCES+=src/native/nativemain.cpp
+	CPP_FILES+=$(wildcard test/*.cpp)
+else ifeq ("$(IS_NATIVE_BUILD)","yes")
+	EXCLUDED_SOURCES+=test/testmain.cpp
+else
+
+endif
+
 CPP_FILES += $(wildcard src/*.cpp)
 CPP_FILES += $(wildcard src/native/*.cpp)
-CPP_FILES += TemperatureMonitor.ino
-OBJ_FILES += $(patsubst %.ino, $(OBJ_DIR)/%.o, $(patsubst %.cpp, $(OBJ_DIR)/%.o, $(notdir $(CPP_FILES))))
+CPP_FILES += src/TemperatureMonitor.ino
+FILTERED_CPP_FILES=$(filter-out $(EXCLUDED_SOURCES),$(CPP_FILES))
+OBJ_FILES += $(patsubst %.ino, $(OBJ_DIR)/%.o, $(patsubst %.cpp, $(OBJ_DIR)/%.o, $(notdir $(FILTERED_CPP_FILES))))
 
 $(OBJ_DIR):
 	@mkdir -p $@
@@ -91,7 +107,7 @@ $(OBJ_DIR)/%.o: src/native/%.cpp $(OBJ_DIR)/%.d |$(OBJ_DIR)
 	$(COMPILE)
 	$(POSTCOMPILE)
 
-$(OBJ_DIR)/%.o: %.ino $(OBJ_DIR)/%.d |$(OBJ_DIR)
+$(OBJ_DIR)/%.o: src/%.ino $(OBJ_DIR)/%.d |$(OBJ_DIR)
 	@echo "=> $<"
 	$(COMPILE)
 	$(POSTCOMPILE)
@@ -108,7 +124,7 @@ $(OBJ_DIR)/%.o: test/%.cpp |$(OBJ_DIR)
 
 $(OBJ_DIR)/%.d: ;
 .PRECIOUS: $(OBJ_DIR)/%.d
-include $(wildcard $(patsubst %,$(OBJ_DIR)/%.d, $(basename $(CPP_FILES))))
+include $(wildcard $(patsubst %,$(OBJ_DIR)/%.d, $(basename $(FILTERED_CPP_FILES))))
 
 $(OBJ_DIR)/.cleanMake: Makefile |$(OBJ_DIR)
 	@rm -rf $(OBJ_DIR)/*
@@ -120,6 +136,8 @@ all: firsttime $(OBJ_DIR)/.cleanMake $(TARGET)
 clean: 
 	@rm -rf $(OBJ_DIR)
 
+native: all
+
 test: all
 	@echo
 	@echo "*****************************************************"
@@ -127,7 +145,7 @@ test: all
 	@$(TARGET)
 
 show:
-	$(info bb $(wildcard $(patsubst %,$(OBJ_DIR)/%.d, $(basename $(CPP_FILES)))))
+	$(info bb $(wildcard $(patsubst %,$(OBJ_DIR)/%.d, $(basename $(FILTERED_CPP_FILES)))))
 	@echo "*** CPP_FLAGS *** "
 	@echo $(CPP_FLAGS)
 	@echo
@@ -136,8 +154,12 @@ show:
 	@echo $(INCLUDES)
 	@echo
 
+	@echo "*** EXCLUDED SOURCES *** "
+	@echo $(EXCLUDED_SOURCES)
+	@echo
+
 	@echo "*** SOURCES *** "
-	@echo $(CPP_FILES)
+	@echo $(FILTERED_CPP_FILES)
 	@echo
 
 	@echo "*** OBJECTS *** "

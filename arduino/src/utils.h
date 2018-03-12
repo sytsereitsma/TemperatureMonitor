@@ -1,9 +1,10 @@
 #ifndef UTILS_H__
 #define UTILS_H__
 #include <cstdint>
+#include "Print.h"
 
 template <typename taType>
-Stream& operator<<(Stream& outStream, taType value) {
+Print& operator<<(Print& outStream, taType value) {
     outStream.print(value);
     return outStream;
 }
@@ -11,11 +12,13 @@ Stream& operator<<(Stream& outStream, taType value) {
 struct Hex {
     uint8_t value;
 };
-Stream& operator<<(Stream& outStream, Hex value);
+Print& operator<<(Print& outStream, Hex value);
 
 struct OneWireAddress {
     const uint8_t* address;
 };
-Stream& operator<<(Stream& outStream, OneWireAddress address);
+Print& operator<<(Print& outStream, OneWireAddress address);
+
+uint8_t NMEAChecksum (const uint8_t* inBegin, const uint8_t* inEnd);
 
 #endif /* end of include guard: UTILS_H__ */

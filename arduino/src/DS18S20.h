@@ -3,11 +3,11 @@
 #include "constants.h"
 
 class IOneWire;
-class Stream;
+class Print;
 
 class DS18S20 {
 public:
-    DS18S20 (IOneWire& inOneWire, Stream& inLogStream);
+    DS18S20 (IOneWire& inOneWire, Print& inLogStream);
 
     bool Detect ();
 
@@ -24,7 +24,7 @@ private:
 private:
     uint8_t mAddress [kAddressSize];
     IOneWire& mDS;
-    Stream& mLogStream;
+    Print& mLogStream;
     bool mParasitePowered;
 };
 
