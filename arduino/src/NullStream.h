@@ -2,7 +2,8 @@
 #define NULLSTREAM_H__
 #include "Print.h"
 
-struct NullStream : public Print {
+class NullStream : public Print {
+public:
     void write (uint8_t) override {}
 };
 

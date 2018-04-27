@@ -15,7 +15,7 @@ namespace {
     */
     class NMEADecoratedStream : public Print {
     public:
-        NMEADecoratedStream (Print& inStream) :
+        explicit NMEADecoratedStream (Print& inStream) :
             mStream (inStream),
             mChecksum (0)
         {

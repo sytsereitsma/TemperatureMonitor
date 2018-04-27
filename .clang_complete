@@ -1,0 +1,9 @@
+-include
+cstdint
+-Iarduino/bld/native/external/ArduinoEmulator/src
+-Iarduino/bld/native/external/Catch/single_include
+-Iarduino/bld/native/external/FakeIt/single_header/catch
+-Iarduino/src/native
+-Iarduino/src
+-Iarduino/test
+-Wall

@@ -9,7 +9,7 @@ namespace {
 }
 
 TEST_CASE( "ChangeReporter tester", "[base]" ) {
-    StringStream logStream;
+    OStringStream logStream;
 
     SECTION("Reports values in NMEA style.") {
         ChangeReporter reporter (logStream, kAddress, 5);

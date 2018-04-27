@@ -80,13 +80,18 @@ namespace {
         }
 
         Mock <IOneWire> mockOneWire;
-        StringStream logStream;
+        OStringStream logStream;
         DS18S20 ds;
     };
 }
 
 TEST_CASE( "DS18S20 testers", "[base]" ) {
     Context ctx;
+
+    SECTION("Sets sensor name to TEMP-<pin>-<address>") {
+        REQUIRE (ctx.DoSuccessfulDetection ());
+        REQUIRE_THAT (ctx.ds.GetName (), Catch::Matchers::Equals("TEMP-3-28-010203040506-A5"));
+    }
 
     SECTION("Detects sensor address at detection") {
         REQUIRE (ctx.DoSuccessfulDetection ());

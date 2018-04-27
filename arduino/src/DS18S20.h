@@ -1,11 +1,12 @@
 #ifndef _H_DS18B20
 #define _H_DS18B20
 #include "constants.h"
+#include "Sensor.h"
 
 class IOneWire;
 class Print;
 
-class DS18S20 {
+class DS18S20 : public Sensor {
 public:
     DS18S20 (IOneWire& inOneWire, Print& inLogStream);
 

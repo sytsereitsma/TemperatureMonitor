@@ -6,14 +6,14 @@
 
 DS18S20::DS18S20 (IOneWire& inOneWire, Print& inLogStream) :
     mDS (inOneWire),
-    mLogStream (inLogStream)
+    mLogStream (inLogStream),
+    mParasitePowered (false)
 {
     ResetAddress ();
 }
 
 
 bool DS18S20::Detect () {
-    constexpr uint8_t kCRCIndex {7};
 
     bool found (false);
 
@@ -25,12 +25,13 @@ bool DS18S20::Detect () {
         mLogStream << "No devices found at pin " << mDS.GetPin () << ".\n";
     }
     else {
+        constexpr uint8_t kCRCIndex {7};
         const auto expectedCRC (mDS.crc8 (addr, kCRCIndex));
         if (expectedCRC == addr[kCRCIndex]) {
             mLogStream << "Device found at pin " << mDS.GetPin () << ": " << OneWireAddress {addr} << "\n";
 
             constexpr uint8_t kDS18S20FamilyCode = {0x28};
-            if (addr[0] != kDS18S20FamilyCode && addr[0] != kDS18S20FamilyCode) {
+            if (addr[0] != kDS18S20FamilyCode) {
                 mLogStream << "Unrecognized/unsupported 1-Wire family code at pin" << mDS.GetPin () << "\n";
             }
             else {
@@ -96,7 +97,7 @@ bool DS18S20::SendCommand (uint8_t inCommand, bool inPower) {
     bool ok (false);
     if (mDS.reset()) {
         mDS.select(mAddress);
-        mDS.write(inCommand, inPower ? 1 : 0); // start conversion, with parasite power on at the end
+        mDS.write(inCommand, inPower); // start conversion, with parasite power on at the end
         ok = true;
     }
 
