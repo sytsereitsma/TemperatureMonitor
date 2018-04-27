@@ -7,7 +7,7 @@
 using namespace Catch::Matchers;
 
 TEST_CASE( "Utilities tester", "[base]" ) {
-    StringStream logStream;
+    OStringStream logStream;
 
     SECTION("Generic types are printed") {
         //Just try some random types

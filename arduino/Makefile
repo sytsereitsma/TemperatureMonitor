@@ -48,7 +48,7 @@ $(EXTERNAL_DIR)/FakeIt:
 
 $(EXTERNAL_DIR)/Catch:
 	#fakeit 2.04 does not work with the latest (v2.2.0) 
-	$(call git_clone,https://github.com/catchorg/Catch2.git,$@,tags/v2.0.1)
+	$(call git_clone,https://github.com/catchorg/Catch2.git,$@,tags/v1.9.7)
 
 $(EXTERNAL_DIR)/ArduinoEmulator:
 	$(call git_clone,https://github.com/sytsereitsma/ArduinoEmulator.git,$@)

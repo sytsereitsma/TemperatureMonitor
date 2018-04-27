@@ -2,6 +2,8 @@
 #include "IOneWire.h"
 #include "utils.h"
 #include <Stream.h>
+#include "CharBufferPrinter.h"
+#include <string.h>
 
 
 DS18S20::DS18S20 (IOneWire& inOneWire, Print& inLogStream) :
@@ -37,6 +39,11 @@ bool DS18S20::Detect () {
             else {
                 found = true;
                 memcpy (mAddress, addr, sizeof (mAddress));
+
+                char nameBuffer [32];
+                CharBufferPrinter printer (nameBuffer, 32);
+                printer << "TEMP-" << int {mDS.GetPin ()} << '-' << OneWireAddress {mAddress};
+                SetName(nameBuffer);
             }
         }        
         else {
