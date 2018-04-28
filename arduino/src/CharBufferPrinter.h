@@ -5,7 +5,7 @@
 class CharBufferPrinter : public Print {
 public:
     CharBufferPrinter (char* outBuffer, int inSize);
-    void write (uint8_t) override;
+    size_t write (uint8_t) override;
 private:
     char* mWritePos;
     const char* mEndPos;

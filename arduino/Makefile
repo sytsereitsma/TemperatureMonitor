@@ -84,7 +84,7 @@ endif
 
 CPP_FILES += $(wildcard src/*.cpp)
 CPP_FILES += $(wildcard src/native/*.cpp)
-CPP_FILES += src/TemperatureMonitor.ino
+CPP_FILES += src/src.ino
 FILTERED_CPP_FILES=$(filter-out $(EXCLUDED_SOURCES),$(CPP_FILES))
 OBJ_FILES += $(patsubst %.ino, $(OBJ_DIR)/%.o, $(patsubst %.cpp, $(OBJ_DIR)/%.o, $(notdir $(FILTERED_CPP_FILES))))
 

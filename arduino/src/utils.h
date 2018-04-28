@@ -1,6 +1,6 @@
 #ifndef UTILS_H__
 #define UTILS_H__
-#include <cstdint>
+#include <stdint.h>
 #include "Print.h"
 
 template <typename taType>

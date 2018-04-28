@@ -8,12 +8,14 @@ CharBufferPrinter::CharBufferPrinter (char* outBuffer, int inSize) :
     mWritePos [inSize - 1] = '\0';
 }
 
-void CharBufferPrinter::write (uint8_t inByte) {
+size_t CharBufferPrinter::write (uint8_t inByte) {
     if (mWritePos >= mEndPos) {
-        return;
+        return 0u;
     }
 
     *mWritePos = static_cast <char> (inByte);
     ++mWritePos;
     *mWritePos = '\0';
+
+    return 1u;
 }

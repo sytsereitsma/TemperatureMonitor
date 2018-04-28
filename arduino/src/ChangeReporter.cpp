@@ -1,8 +1,7 @@
 #include "Print.h"
 #include "ChangeReporter.h"
 #include "utils.h"
-#include <cmath>
-#include <limits>
+#include <math.h>
 
 namespace {
     /**
@@ -26,9 +25,10 @@ namespace {
             mStream << '*' << Hex {mChecksum} << '\n';
         }
 
-        void write(uint8_t inValue) override {
-            mStream.write(inValue);
+        size_t write(uint8_t inValue) override {
+            size_t count (mStream.write(inValue));
             mChecksum ^= inValue;
+            return count;
         }
     private:
         Print& mStream;
@@ -40,7 +40,7 @@ ChangeReporter::ChangeReporter (Print& inReportStream, const uint8_t* inAddress,
     mReportStream (inReportStream),
     mAddress (inAddress),
     mPin (inPin),
-    mPrevious (std::numeric_limits <float>::max ()),
+    mPrevious (9.0e20f),
     mMinimumChange (0)
 {
 }

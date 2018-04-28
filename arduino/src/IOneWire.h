@@ -1,6 +1,6 @@
 #ifndef IONEWIRE_H__
 #define IONEWIRE_H__
-#include <cstdint>
+#include <stdint.h>
 
 class IOneWire {
 public:
