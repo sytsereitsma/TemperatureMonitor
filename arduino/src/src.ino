@@ -25,7 +25,7 @@ void loop() {
         OneWireWrapper wrapper (pin);
         DS18S20 sensor (wrapper, sLogStream);
         float temperature;
-        if (sensor.GetTemperature (temperature)) {
+        if (sensor.GetMeasurement (temperature)) {
             sLogStream << OneWireAddress {sensor.GetAddress ()} << ':' << temperature << "\n";
         }
     }

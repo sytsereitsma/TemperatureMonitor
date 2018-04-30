@@ -1,24 +1,30 @@
 #include "catch.hpp"
+#include "fakeit.hpp"
 #include <string>
 #include "StringStream.h"
 #include "ChangeReporter.h"
 #include "constants.h"
+#include "Sensor.h"
 
-namespace {
-    const uint8_t kAddress [kAddressSize] = {0, 1, 2, 3, 4, 5, 6, 7};
-}
+using namespace fakeit;
 
 TEST_CASE( "ChangeReporter tester", "[base]" ) {
     OStringStream logStream;
+    Mock <Sensor> mockSensor;
+    mockSensor.get().SetName ("Frobozz");
 
+    SECTION("FAIL.") {
+        REQUIRE(false);
+    }
+
+#if 0
     SECTION("Reports values in NMEA style.") {
-        ChangeReporter reporter (logStream, kAddress, 5);
+        ChangeReporter reporter (logStream, mockSensor);
 
-        reporter.Update (1.23f);
+        reporter.Update ();
 
         REQUIRE (logStream.mString == "$TMP,5-00-010203040506-07,1.23*4F\n");
     }
-
     SECTION("By default reports each update.") {
         ChangeReporter reporter (logStream, kAddress, 3);
 
@@ -54,4 +60,5 @@ TEST_CASE( "ChangeReporter tester", "[base]" ) {
         reporter.Update (kInitialValue);
         REQUIRE (logStream.GetAndReset () == "$TMP,3-00-010203040506-07,1.23*49\n");
     }
+#endif
 }

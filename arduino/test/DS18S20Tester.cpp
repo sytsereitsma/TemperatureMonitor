@@ -7,6 +7,7 @@
 #include "StringStream.h"
 
 using namespace fakeit;
+
 namespace {
     const uint8_t kGoodCrc8 {0xA5}; //Not really, but we're mocking here, so it does not matter
     const uint8_t kGoodAddress [kAddressSize] = {0x28, 1, 2, 3, 4, 5, 6, kGoodCrc8};
@@ -190,7 +191,7 @@ TEST_CASE( "DS18S20 testers", "[base]" ) {
         ctx.MockReadScratchpad (kGoodCrc8);
 
         float temperature;
-        REQUIRE (ctx.ds.GetTemperature (temperature));
+        REQUIRE (ctx.ds.GetMeasurement (temperature));
 
         const float kExpectedTemperature ((kScratchPad [0] + (kScratchPad [1] << 8)) / 16.0f);
         REQUIRE(temperature == Approx(kExpectedTemperature));
@@ -207,7 +208,7 @@ TEST_CASE( "DS18S20 testers", "[base]" ) {
         ctx.MockReadScratchpad (kGoodCrc8 + 1);
 
         float temperature;
-        REQUIRE_FALSE (ctx.ds.GetTemperature (temperature));
+        REQUIRE_FALSE (ctx.ds.GetMeasurement (temperature));
 
         REQUIRE_THAT (ctx.logStream.mString, Catch::Matchers::Contains(
             "Scratchpad CRC is not valid for device 28-010203040506-A5 at pin 3 (expected CRC 0xA6, got 0xA5).\n"

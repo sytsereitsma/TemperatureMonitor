@@ -13,7 +13,7 @@ public:
     bool Detect ();
 
     bool StartConversion ();
-    bool GetTemperature (float& outTemp);
+    bool GetMeasurement (float& outTemp) override;
     bool IsParasitePowered () const;
 
     const uint8_t* GetAddress () const;

@@ -2,17 +2,18 @@
 #define CHANGEREPORTER_H__
 
 class Print;
+class Sensor;
 
 class ChangeReporter {
 public:
-    ChangeReporter (Print& inReportStream, const uint8_t* inAddress, uint8_t inPin);
+    ChangeReporter (Print& inReportStream, Sensor& ioSensor);
     void SetMinimumChange (float inChange);
 
-    void Update (float inTemperature);
+    void Update ();
 private:
-    Print& mReportStream;    
-    const uint8_t* mAddress;
-    const uint8_t mPin;
+    Print& mReportStream;
+    Sensor& mSensor;
+
     float mPrevious;    
     float mMinimumChange;    
 };

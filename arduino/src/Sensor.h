@@ -8,6 +8,8 @@ public:
 
     void SetName (const char* inName);
     const char* GetName () const;
+
+    virtual bool GetMeasurement (float& outValue) = 0;
 private:
     char mName [32];
 };

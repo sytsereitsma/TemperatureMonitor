@@ -70,7 +70,7 @@ bool DS18S20::StartConversion () {
     return SendCommand (kConvertTempCommand, true);
 }
 
-bool DS18S20::GetTemperature (float& outTemp) {
+bool DS18S20::GetMeasurement (float& outTemp) {
     if (mAddress [0] == 0) {
         return false;
     }

@@ -1,7 +1,8 @@
+#include <math.h>
 #include "Print.h"
 #include "ChangeReporter.h"
 #include "utils.h"
-#include <math.h>
+#include "Sensor.h"
 
 namespace {
     /**
@@ -36,10 +37,9 @@ namespace {
     };
 }
 
-ChangeReporter::ChangeReporter (Print& inReportStream, const uint8_t* inAddress, uint8_t inPin) :
+ChangeReporter::ChangeReporter (Print& inReportStream, Sensor& ioSensor) :
     mReportStream (inReportStream),
-    mAddress (inAddress),
-    mPin (inPin),
+    mSensor (ioSensor),
     mPrevious (9.0e20f),
     mMinimumChange (0)
 {
@@ -49,10 +49,13 @@ void ChangeReporter::SetMinimumChange (float inChange) {
     mMinimumChange = inChange;
 }
 
-void ChangeReporter::Update (float inValue) {
-    if (fabs (mPrevious - inValue) >= mMinimumChange) {
-        NMEADecoratedStream str (mReportStream);
-        str << "TMP," << int {mPin} << '-' << OneWireAddress {mAddress} << ',' << inValue;
-        mPrevious = inValue;
+void ChangeReporter::Update () {
+    float value;
+    if (mSensor.GetMeasurement (value)) {
+        if (fabs (mPrevious - value) >= mMinimumChange) {
+            NMEADecoratedStream str (mReportStream);
+            str << "MEAS," << mSensor.GetName () << ',' << value;
+            mPrevious = value;
+        }
     }
 }
